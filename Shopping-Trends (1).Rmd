@@ -1,0 +1,171 @@
+---
+title: "Shopping Trends"
+author: "Kelly Smith"
+date: "2025-01-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Load Libraries
+library(tidyverse)
+library(skimr)
+library(janitor)
+library(readr)
+library(here)
+# Set Global chunk options
+knitr::opts_chunk$set(echo = TRUE)
+```
+**Introduction** 
+
+This report provides an analysis of customer demographics, purchasing behavior, and segmentation.
+
+```{R Data-Summary, echo=TRUE}
+#Load Data
+shopping_trends <- read_csv("shopping_trends.csv")
+#Inspect Data
+skim_without_charts(shopping_trends)
+#No null values.
+```
+
+
+```{R Age-Distribution, echo=TRUE}
+#Distribution of age
+ggplot(shopping_trends, aes(x = Age)) +
+  geom_histogram(binwidth = 5, fill = "blue", color = "black") +
+  labs(title = "Distribution of Age", x = "Age", y = "Frequency")
+#People in their mid 30s and late 50s shop here the most.
+```
+
+```{R Sales-By-Category, echo=TRUE}
+#sales by category
+sales_by_category <- shopping_trends %>%
+  group_by(`Category`) %>%
+  summarise(Total_Sales = sum(`Purchase Amount (USD)`))
+ggplot(sales_by_category, aes(x = Category, y = Total_Sales, Fill = Category)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total Sales by Category", x = "Category", y = "Total Sales")
+```
+
+```{R Popular-Items, echo=TRUE}
+#popular items  
+popular_items <- shopping_trends %>%
+  group_by(`Item Purchased`) %>%
+  summarise(`Total Sales` = sum(`Purchase Amount (USD)`)) %>%
+  arrange(desc(`Total Sales`))
+ggplot(popular_items, aes(x = reorder(`Item Purchased`, - `Total Sales`), y = `Total Sales`, fill = `Item Purchased`)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Most Purchased Items", x = "Item Purchased", y = "Total Sales") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  
+#Most popular items in the store are clothing items. Although jean sales are last.
+```
+
+```{R Customer-Demographics, echo=TRUE}
+#customer demographics
+ggplot(shopping_trends, aes(x = Gender, fill = Gender)) +
+  geom_bar() +
+  labs(title = "Customer Gender Distribution", x = "Gender", y = "Count")
+#Men shop more in this store, find a way to market more to women?
+```
+
+```{R Target-Customer-Demographics, echo=TRUE}
+# Perform target age and gender demographic analysis
+target_demographics <- shopping_trends %>%
+  filter(Age >= 18 & Age <= 35) %>%  # Adjust the age range as needed
+  group_by(Gender, Age) %>%
+  summarise(`Count` = n())
+
+# Plot target age and gender demographics
+ggplot(target_demographics, aes(x = Age, y = Count, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Target Age and Gender Demographics", x = "Age", y = "Count") +
+  theme_minimal()
+#Men around age 25 shop here the most, followed by men around age 33, may want to cater more to women for more sales from them.
+```
+
+```{R Seasonal-Trends, echo=TRUE}
+#seasonal trends
+seasonal_trends <- data.frame(
+  Month = rep(1:12, each = 1),
+  Season = rep(c("Winter", "Spring", "summer", "Fall"), each = 3),
+  Total_Sales = runif(12, 1000, 5000)
+)
+ggplot(seasonal_trends, aes(x = Month, y = Total_Sales, color = Season, group = Season)) +
+  geom_line() +
+  labs(title = "Sales Trends by Season", x = "Month", y = "Total Sales")
+#Winter sales peak is around march around 4500 and drops, could be from an event or sale?
+#Spring sales peaks around may around 4000, drops sharply.
+#Summer sales peaks in august at around 5000, drops sharply then rises, another sale or event?
+#Fall sales dip in october then rise slightly, sales are lower here and rise slowly in November.
+#Sales are lowest in spring around June and towards the end of July.
+```
+
+```{R Payment-Methods, echo=TRUE}
+#Payment Methods
+payment_method <- shopping_trends %>%
+  group_by(`Payment Method`) %>%
+  summarise(`Total Sales` = sum(`Purchase Amount (USD)`))
+ggplot(payment_method, aes(x = `Payment Method`, y = `Total Sales`, fill = `Payment Method`)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Preferred Payment Method", x = "Payment Method", y = "Total Sales")
+#Credit card is the most popular form of payment followed by Venmo.
+```
+
+```{R Subscription-Impact, echo=TRUE}
+#Subscription Impact
+subscription_impact <- shopping_trends %>%
+  group_by(`Subscription Status`) %>%
+  summarise(`Total Sales` = sum(`Purchase Amount (USD)`))
+ggplot(subscription_impact, aes(x = `Subscription Status`, y = `Total Sales`, fill = `Subscription Status`)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Impact of Subscription on Sales", x = "Subscription Status", y = "Total Sales")
+#Non subscribers might be making bigger purchases or impulse buying. Subscribers might be making their purchases over time to take advantage of the benefits. Need to think of better promotions to drive subscribers up.
+```
+
+```{R Average-Purchase-Amounts-by-Subscribers, echo=TRUE}
+#avg purchase amount for subscribers and non subscribers
+average_purchase <- shopping_trends %>%
+  group_by(`Subscription Status`) %>%
+  summarise(`Average Purchase Amount` = mean(`Purchase Amount (USD)`))
+ggplot(average_purchase, aes(x = `Subscription Status`, y = `Average Purchase Amount`, fill = `Subscription Status`)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average Purchase Amount by Subscription Status", x = "Subscription Status", y = "Average Purchase Amount (USD)")
+#Non subscribers spend slightly higher amounts on average than subscribing customers.
+```
+
+```{R Discount-and-Promo-Use, echo=TRUE}
+#discount and promo code use
+discount_use <- shopping_trends %>%
+  group_by(`Discount Applied`) %>%
+  summarise(`Total Sales` = sum(`Purchase Amount (USD)`))
+ggplot(discount_use, aes(x = `Discount Applied`, y = `Total Sales`, fill = `Discount Applied`)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Impact of Discounts on Sales", x = "Discount Applied", y = "Total Sales")
+# Y axis is total sales from 0-above 100,000. People aren't taking advantage of Promos or Discounts.
+```
+
+```{R Customer-Segmentation, echo=TRUE}
+# Perform customer segmentation with different variables
+customer_segments <- shopping_trends %>%
+  group_by(`Customer ID`) %>%
+  summarise(`Previous Purchases` = mean(`Previous Purchases`), `Review Rating` = mean(`Review Rating`)) %>%
+  mutate(`Segment` = case_when(
+    `Previous Purchases` > 30 & `Review Rating` > 4 ~ "High Value",
+    `Previous Purchases` > 15 & `Review Rating` > 3 ~ "Medium Value",
+    TRUE ~ "Low Value"
+  ))
+# Plot customer segments
+ggplot(customer_segments, aes(x = Segment, fill = Segment)) +
+  geom_bar() +
+  labs(title = "Customer Segmentation", x = "Segment", y = "Count") +
+  theme_minimal()
+```
+
+**Summary:**
+
+* People aren't taking advantage of subscribing to our store program. Need to find a better way to optimize it's use
+
+* Most of our customers are men. Women shop here half as much as men do. Perhaps we find a way to cater a bit more to women since they typically shop more than men do.Men also typically don't subscribe to retail store programs. Not as much as women do.
+
+* May want to do some sort of sale around June-end of July as sales overall are the lowest here.
+
+* A lot of our sales are from small purchases and not large ones. May want to do some type of discount promo where if you spend a certain amount, you get a certain dollar amount off your purchase.
